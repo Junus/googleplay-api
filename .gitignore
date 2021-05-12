@@ -8,6 +8,3 @@ dist/
 *.egg-info/
 .idea/
 .venv/
-
-# This file will be generated during build
-gpapi/googleplay_pb2.py

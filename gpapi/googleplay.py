@@ -32,7 +32,7 @@ BULK_URL = FDFE + "bulkDetails"
 LOG_URL = FDFE + "log"
 TOC_URL = FDFE + "toc"
 ACCEPT_TOS_URL = FDFE + "acceptTos"
-LIST_URL = FDFE + "list"
+LIST_URL = FDFE + "listTopChartItems"
 REVIEWS_URL = FDFE + "rev"
 
 CONTENT_TYPE_URLENC = "application/x-www-form-urlencoded; charset=UTF-8"
@@ -427,6 +427,36 @@ class GooglePlayAPI(object):
 
         return utils.parseProtobufObj(data.payload.browseResponse)
 
+    def list_ranks(self, cat, ctr, next_page_url=None):
+        """
+        List top ranks for the given category and rank list.
+        Args:
+          cat (str) - Category ID.
+          ctr (str) - Rank list ID.
+          nb_results (int) - Number of results per request.
+          next_page_url (str) - Next page url for subsequent requests.
+        Returns:
+          (a list of apps, next page url)
+        """
+        if next_page_url:
+            path = FDFE + next_page_url
+        else:
+            path = LIST_URL + "?c=3&scat={}".format(requests.utils.quote(cat))
+            path += "&stcid={}".format(requests.utils.quote(ctr))
+
+        data = self.executeRequestApi2(path)
+        apps = []
+        for d in data.payload.listResponse.doc:  # categories
+            for c in d.child:  # sub-category
+                for a in c.child:  # app
+                    apps.append(utils.parseProtobufObj(a))
+        try:
+            # Sometimes we get transient very short response which indicates there's no more data
+            next_page_url = data.payload.listResponse.doc[0].child[0].containerMetadata.nextPageUrl
+        except Exception:
+            return (apps, "")
+        return (apps, next_page_url)
+
     def list(self, cat, ctr=None, nb_results=None, offset=None):
         """List all possible subcategories for a specific category. If
         also a subcategory is provided, list apps from this category.
@@ -508,7 +538,7 @@ class GooglePlayAPI(object):
                 'chunk_size': chunk_size}
 
     def delivery(self, packageName, versionCode=None, offerType=1,
-                 downloadToken=None, expansion_files=False):
+                 downloadToken=None, expansion_files=False, versionString=None):
         """Download an already purchased app.
 
         Args:
@@ -534,6 +564,14 @@ class GooglePlayAPI(object):
             # pick up latest version
             appDetails = self.details(packageName).get('details').get('appDetails')
             versionCode = appDetails.get('versionCode')
+            versionString = appDetails.get('versionString')
+
+        if versionString is None:
+            # pick up latest version
+            appDetails = self.details(packageName).get('details').get('appDetails')
+            versionString = appDetails.get('versionString')
+
+
 
         params = {'ot': str(offerType),
                   'doc': packageName,
@@ -553,6 +591,8 @@ class GooglePlayAPI(object):
         else:
             result = {}
             result['docId'] = packageName
+            result['versionCode'] = versionCode
+            result['versionString'] = versionString
             result['additionalData'] = []
             result['splits'] = []
             downloadUrl = response.payload.deliveryResponse.appDeliveryData.downloadUrl
@@ -613,7 +653,7 @@ class GooglePlayAPI(object):
         params = {'ot': str(offerType),
                   'doc': packageName,
                   'vc': str(versionCode)}
-        self.log(packageName)
+        # self.log(packageName)
         response = requests.post(PURCHASE_URL, headers=headers,
                                  params=params, verify=ssl_verify,
                                  timeout=60,
