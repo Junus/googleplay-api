@@ -3,6 +3,7 @@
 import logging
 import os
 import re
+import json
 from requests.exceptions import ChunkedEncodingError
 
 from flask import Flask, make_response, jsonify, abort, send_from_directory
@@ -22,6 +23,13 @@ logging.basicConfig(
     level=log_level,
 )
 logging.getLogger("werkzeug").disabled = True
+
+
+if 'accounts' not in os.environ and 'accounts' not in os.environ['accounts']:
+    exit(1)
+else:
+    accounts = json.loads(os.environ['accounts'])
+indx = 0
 
 # Directory where to save the downloaded applications.
 downloaded_apk_location = os.path.join(
@@ -55,10 +63,11 @@ def application_error(error):
 def process(package_name):
     if package_name_regex.match(package_name):
         try:
-            gsf_id = int(os.environ["GPAPI_GSFID"])
-            auth_sub_token = os.environ["GPAPI_TOKEN"]
+            account = _get_account()
+            gsf_id = int(account['gsf_id'])
+            auth_sub_token = account['token']
 
-            server = GooglePlayAPI("it_IT", "Europe/Rome", device_codename="bacon")
+            server = GooglePlayAPI(account['lang'], account['timezone'], device_codename=account['device'])
             server.login(None, None, gsf_id, auth_sub_token)
 
             try:
@@ -112,6 +121,15 @@ def process(package_name):
 @application.route('/download/<path:filename>', methods=['GET', 'POST'])
 def download(filename):
     return send_from_directory(directory=downloaded_apk_location, filename=filename)
+
+
+def _get_account():
+    global indx
+    if len(accounts['accounts']) == indx:
+        indx = 0
+    acc = accounts['accounts'][indx]
+    indx += 1
+    return acc
 
 
 if __name__ == "__main__":
