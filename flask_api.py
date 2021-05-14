@@ -25,10 +25,10 @@ logging.basicConfig(
 logging.getLogger("werkzeug").disabled = True
 
 
-if 'accounts' not in os.environ and 'accounts' not in os.environ['accounts']:
+if 'ACCOUNTS' not in os.environ and 'accounts' not in os.environ['ACCOUNTS']:
     exit(1)
 else:
-    accounts = json.loads(os.environ['accounts'])
+    accounts = json.loads(os.environ['ACCOUNTS'])
 indx = 0
 
 # Directory where to save the downloaded applications.
