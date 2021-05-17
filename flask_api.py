@@ -85,6 +85,7 @@ def process(package_name):
                         apk_file.write(chunk)
 
                 return {
+                    "error": False,
                     "package": package_name,
                     "filename": filename,
                     "version": fl.get('versionString'),
@@ -96,23 +97,38 @@ def process(package_name):
                     f"An error during the download "
                     f"package name '{package_name}'",
                 )
-                return jsonify({
+                return {
                     "package": package_name,
+                    "error": True,
                     "status": "download error"
-                }), 400
+                }
             except AttributeError:
                 logger.error(
                     f"Unable to retrieve application with "
                     f"package name '{package_name}'",
                 )
-                return jsonify({
+                return {
                     "package": package_name,
+                    "error": True,
                     "status": "not valid"
-                }), 400
+                }
 
         except Exception as e:
             logger.critical(f"Error during the download: {e}")
-            abort(500)
+            desc = 'unknown'
+            if e.value and "not supported in your country" in e.value:
+                return {
+                    "package": package_name,
+                    "error": True,
+                    "status": "country"
+                }
+            if e.value and "device is not compatible" in e.value:
+                return {
+                    "package": package_name,
+                    "error": True,
+                    "status": "device"
+                }
+            abort(500, desc)
     else:
         logger.critical("Please specify a valid package name")
         abort(400, description='Not valid package')
@@ -120,7 +136,7 @@ def process(package_name):
 
 @application.route('/download/<path:filename>', methods=['GET', 'POST'])
 def download(filename):
-    return send_from_directory(directory=downloaded_apk_location, filename=filename)
+    return send_from_directory(downloaded_apk_location, filename)
 
 
 def _get_account():
