@@ -24,8 +24,8 @@ logging.basicConfig(
 )
 logging.getLogger("werkzeug").disabled = True
 
-
-if 'ACCOUNTS' not in os.environ and 'accounts' not in os.environ['ACCOUNTS']:
+if 'ACCOUNTS' not in os.environ or 'accounts' not in os.environ['ACCOUNTS']:
+    logger.error("NO ACCOUNTS")
     exit(1)
 else:
     accounts = json.loads(os.environ['ACCOUNTS'])
