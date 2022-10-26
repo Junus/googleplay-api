@@ -615,6 +615,8 @@ class GooglePlayAPI(object):
         else:
             result = {}
             result['docId'] = packageName
+            result['versionCode'] = versionCode
+            result['versionString'] = versionString
             result['additionalData'] = []
             result['splits'] = []
             downloadUrl = response.payload.deliveryResponse.appDeliveryData.downloadUrl
